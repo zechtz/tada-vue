@@ -15,6 +15,7 @@ import { defineComponent, reactive } from "@vue/composition-api";
 
 import { createNamespacedHelpers } from "vuex-composition-helpers";
 const { useState } = createNamespacedHelpers("SnackBar");
+import store from "@/store";
 
 export default defineComponent({
   setup(props, context) {
@@ -27,7 +28,7 @@ export default defineComponent({
     const timeout = -1;
 
     const close = () => {
-      context.emit("close", false);
+      store.dispatch("SnackBar/CLOSE");
     };
 
     return {

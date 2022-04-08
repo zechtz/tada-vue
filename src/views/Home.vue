@@ -1,88 +1,129 @@
 <template>
-  <div class="home mx-auto" max-width="600">
-    <Snackbar
-      :isOpen="data.isOpen"
-      :message="data.text"
-      @close="closeSidebar"
+  <div class="container">
+    <Header />
+    <TodoInput @addTodo="addTodo" />
+    <TodoList
+      :todos="data.todos"
+      @deleteTodo="deleteTodo"
+      @changeStatus="updateStatus"
+      @updateTodo="updateTodo"
     />
-    <v-col>
-      <v-form v-model="data.valid" @submit.prevent="addTodo">
-        <v-row class="p-10">
-          <v-text-field
-            class="m-10"
-            label="Add Todo"
-            hide-details="auto"
-            v-model="data.formData.text"
-          />
-          <v-btn elevation="2" color="primary">Submit</v-btn>
-        </v-row>
-      </v-form>
-      <H2>Hello World</H2>
-      <TodoList :items="data.items" @itemClicked="setItem" />
-    </v-col>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, reactive } from "@vue/composition-api";
+import {
+  defineComponent,
+  reactive,
+  onMounted,
+  watch,
+} from "@vue/composition-api";
+import axios from "axios";
+import { v4 as uuidv4 } from "uuid";
+import _ from "lodash";
+
+import TodoList from "todos/TodoList.vue";
+import Header from "todos/Header.vue";
+import TodoInput from "todos/TodoInput.vue";
 import store from "@/store";
 
-import TodoList from "@/components/TodoList.vue";
-import Snackbar from "@/components/Snackbar.vue";
-import H2 from "@/components/H2.vue";
+interface Todo {
+  id: any;
+  title: string;
+  completed: boolean;
+}
+
+interface DirtyTodo {
+  userId: any;
+  id: any;
+  title: string;
+  completed: boolean;
+}
 
 export default defineComponent({
   name: "Home",
   components: {
+    Header,
     TodoList,
-    Snackbar,
-    H2,
+    TodoInput,
   },
   setup() {
     const data = reactive({
       valid: true,
-      isOpen: false,
-      text: "I am a snackbar",
-      index: "",
-      items: [
-        { text: "Real-Time", icon: "mdi-clock" },
-        { text: "Audience", icon: "mdi-account" },
-        { text: "Conversions", icon: "mdi-flag" },
-      ],
-      formData: {
-        text: "",
-        icon: "mdi-flag",
-      },
+      todos: [],
     });
 
-    const closeSidebar = (value: boolean) => {
-      store.dispatch("SnackBar/CLOSE");
+    const generateData = (data: DirtyTodo[]) => {
+      return data.map((todo: DirtyTodo) => ({
+        id: todo.id,
+        title: todo.title,
+        completed: todo.completed,
+      }));
     };
 
-    const addTodo = () => {
-      if (data.index !== "") {
-        const idx = parseInt(data.index);
-        data.items.splice(idx, 1);
-        data.items.push(data.formData);
-        data.index = "";
-      } else {
-        data.items.push(data.formData);
+    onMounted(() => {
+      axios
+        .get("https://jsonplaceholder.typicode.com/todos?_limit=10")
+        .then((response) => {
+          data.todos = generateData(response.data);
+        });
+    });
+
+    watch(
+      () => _.cloneDeep(data),
+      (nextState, prevState) => {
+        console.log("next State", nextState);
+        console.log("prev State", prevState);
+
+        if (prevState.todos !== nextState.todos) {
+          const temp = JSON.stringify(nextState.todos);
+          localStorage.setItem("todos", temp);
+        }
       }
-      data.formData = { text: "", icon: "mdi-flag" };
-      store.dispatch("SnackBar/OPEN", "Successfully Created");
+    );
+
+    const addTodo = (title: string) => {
+      const newTodo: any = {
+        id: uuidv4(),
+        title: title,
+        completed: false,
+      };
+
+      data.todos.push(newTodo);
+      store.dispatch("SnackBar/OPEN", "Successfully Created Todo");
     };
 
-    const setItem = (item: any) => {
-      data.index = item.index;
-      delete item.index;
-      data.formData = item;
+    const updateStatus = (id: number | string) => {
+      const todo = data.todos.find((todo) => todo.id === id);
+      let status = todo.completed ? "Incomplete" : "Complete";
+
+      data.todos = data.todos.map((todo: Todo) => {
+        if (todo.id === id) {
+          return {
+            ...todo,
+            completed: !todo.completed,
+          };
+        }
+        return todo;
+      });
+      store.dispatch("SnackBar/OPEN", `Successfully Marked Todo as ${status}`);
+    };
+
+    const deleteTodo = (todo: any) => {
+      data.todos = data.todos.filter((item) => item.id !== todo.id);
+      store.dispatch("SnackBar/OPEN", `Successfully Deleted Todo`);
+    };
+
+    const updateTodo = (todo) => {
+      console.log("update this todo", todo);
     };
 
     return {
       data,
       addTodo,
-      setItem,
-      closeSidebar,
+      updateStatus,
+      deleteTodo,
+      updateTodo,
     };
   },
 });
