@@ -72,9 +72,6 @@ export default defineComponent({
     watch(
       () => _.cloneDeep(data),
       (nextState, prevState) => {
-        console.log("next State", nextState);
-        console.log("prev State", prevState);
-
         if (prevState.todos !== nextState.todos) {
           const temp = JSON.stringify(nextState.todos);
           localStorage.setItem("todos", temp);
@@ -114,8 +111,17 @@ export default defineComponent({
       store.dispatch("SnackBar/OPEN", `Successfully Deleted Todo`);
     };
 
-    const updateTodo = (todo) => {
-      console.log("update this todo", todo);
+    const updateTodo = (entry: Todo) => {
+      data.todos = data.todos.map((todo: Todo) => {
+        if (todo.id === entry.id) {
+          return {
+            ...todo,
+            title: entry.title,
+          };
+        }
+        return todo;
+      });
+      store.dispatch("SnackBar/OPEN", `Successfully Updated Todo`);
     };
 
     return {
