@@ -1,6 +1,6 @@
 <template>
   <div class="container">
-    <Header :title="'The todo List'" />
+    <Header :title="'Todos'" :completed="completed" />
     <TodoInput @addTodo="addTodo" />
     <TodoList
       :todos="data.todos"
@@ -17,6 +17,7 @@ import {
   reactive,
   onMounted,
   watch,
+  computed,
 } from "@vue/composition-api";
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
@@ -40,13 +41,19 @@ interface DirtyTodo {
   completed: boolean;
 }
 
+interface Todos {
+  todos: Todo[];
+}
+
 export default defineComponent({
   name: "Home",
+
   components: {
     Header,
     TodoList,
     TodoInput,
   },
+
   setup() {
     const data = reactive({
       valid: true,
@@ -72,6 +79,8 @@ export default defineComponent({
     watch(
       () => _.cloneDeep(data),
       (nextState, prevState) => {
+        // console.log("next", nextState);
+        // console.log("prev", prevState);
         if (prevState.todos !== nextState.todos) {
           const temp = JSON.stringify(nextState.todos);
           localStorage.setItem("todos", temp);
@@ -91,7 +100,7 @@ export default defineComponent({
     };
 
     const updateStatus = (id: number | string) => {
-      const todo = data.todos.find((todo) => todo.id === id);
+      const todo = data.todos.find((todo: Todo) => todo.id === id);
       let status = todo.completed ? "Incomplete" : "Complete";
 
       data.todos = data.todos.map((todo: Todo) => {
@@ -107,7 +116,7 @@ export default defineComponent({
     };
 
     const deleteTodo = (todo: any) => {
-      data.todos = data.todos.filter((item) => item.id !== todo.id);
+      data.todos = data.todos.filter((item: Todo) => item.id !== todo.id);
       store.dispatch("SnackBar/OPEN", `Successfully Deleted Todo`);
     };
 
@@ -124,12 +133,17 @@ export default defineComponent({
       store.dispatch("SnackBar/OPEN", `Successfully Updated Todo`);
     };
 
+    const completed = computed(() => {
+      return data.todos.filter((todo: Todo) => todo.completed).length;
+    });
+
     return {
       data,
       addTodo,
       updateStatus,
       deleteTodo,
       updateTodo,
+      completed,
     };
   },
 });
