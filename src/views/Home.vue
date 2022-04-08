@@ -1,6 +1,6 @@
 <template>
   <div class="container">
-    <Header />
+    <Header :title="'The todo List'" />
     <TodoInput @addTodo="addTodo" />
     <TodoList
       :todos="data.todos"
